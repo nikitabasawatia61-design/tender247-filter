@@ -4,7 +4,6 @@ let activeTab = 'matched';
 const $ = (id) => document.getElementById(id);
 
 function setDefaultDate() {
-  // Known active date in profile; change as needed
   $('closingDate').value = '2026-07-17';
 }
 
@@ -22,6 +21,7 @@ function renderStats(summary) {
   const items = [
     ['Total fetched', summary.total_fetched, ''],
     ['Matched', summary.matched, 'ok'],
+    ['Supply', summary.supply_related ?? 0, 'warn'],
     ['Not your field', summary.excluded_not_field, ''],
     ['Excluded (API finance)', summary.excluded_financial_api, ''],
   ];
@@ -39,6 +39,7 @@ function getRowsForTab() {
 
   let rows = [];
   if (activeTab === 'matched') rows = scanResult.matched || [];
+  else if (activeTab === 'supply') rows = scanResult.supply || [];
   else {
     const ex = scanResult.excluded || {};
     rows = [
@@ -56,9 +57,60 @@ function getRowsForTab() {
   );
 }
 
+function renderMatchedTable(rows) {
+  return `
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Organization</th><th>Brief</th><th>Value</th><th>EMD</th><th>MSME</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${rows
+          .map(
+            (r) => `<tr>
+            <td>${r.tender_id}</td>
+            <td>${esc(r.organization || '—')}</td>
+            <td class="brief">${esc((r.brief || '').slice(0, 140))}
+              ${r.notes?.length ? `<div class="notes">${esc(r.notes.join(' · '))}</div>` : ''}
+            </td>
+            <td>${esc(r.value_fmt || '—')}</td>
+            <td>${esc(r.emd_fmt || '—')}</td>
+            <td>${r.msme ? '<span class="badge">MSME</span>' : '—'}</td>
+            <td>${r.url ? `<a class="link" href="${r.url}" target="_blank" rel="noopener">Open</a>` : ''}</td>
+          </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderSupplyTable(rows) {
+  return `
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Organization</th><th>Brief</th><th>Value</th><th>EMD</th><th>Reason</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${rows
+          .map(
+            (r) => `<tr>
+            <td>${r.tender_id}</td>
+            <td>${esc(r.organization || '—')}</td>
+            <td class="brief">${esc((r.brief || '').slice(0, 140))}</td>
+            <td>${esc(r.value_fmt || '—')}</td>
+            <td>${esc(r.emd_fmt || '—')}</td>
+            <td>${esc(r.reason || 'Supply related')}</td>
+            <td>${r.url ? `<a class="link" href="${r.url}" target="_blank" rel="noopener">Open</a>` : ''}</td>
+          </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>`;
+}
+
 function renderTable() {
   const rows = getRowsForTab();
   $('countMatched').textContent = scanResult?.summary?.matched ?? 0;
+  $('countSupply').textContent = scanResult?.summary?.supply_related ?? scanResult?.supply?.length ?? 0;
   const ex = scanResult?.excluded || {};
   $('countExcluded').textContent =
     (ex.not_field?.length || 0) + (ex.financial_api?.length || 0);
@@ -71,7 +123,7 @@ function renderTable() {
   if (!rows.length) {
     const hint =
       activeTab === 'matched' && scanResult.summary?.matched === 0
-        ? ' Check the <strong>Excluded</strong> tab.'
+        ? ' Check the <strong>Supply</strong> or <strong>Excluded</strong> tabs.'
         : '';
     $('tableWrap').innerHTML = `<p class="empty">No tenders in this tab${$('searchBox').value ? ' matching search' : ''}.${hint}</p>`;
     return;
@@ -100,29 +152,12 @@ function renderTable() {
     return;
   }
 
-  $('tableWrap').innerHTML = `
-    <table>
-      <thead><tr>
-        <th>ID</th><th>Organization</th><th>Brief</th><th>Value</th><th>EMD</th><th>MSME</th><th></th>
-      </tr></thead>
-      <tbody>
-        ${rows
-          .map(
-            (r) => `<tr>
-            <td>${r.tender_id}</td>
-            <td>${esc(r.organization || '—')}</td>
-            <td class="brief">${esc((r.brief || '').slice(0, 140))}
-              ${r.notes?.length ? `<div class="notes">${esc(r.notes.join(' · '))}</div>` : ''}
-            </td>
-            <td>${esc(r.value_fmt || '—')}</td>
-            <td>${esc(r.emd_fmt || '—')}</td>
-            <td>${r.msme ? '<span class="badge">MSME</span>' : '—'}</td>
-            <td>${r.url ? `<a class="link" href="${r.url}" target="_blank" rel="noopener">Open</a>` : ''}</td>
-          </tr>`
-          )
-          .join('')}
-      </tbody>
-    </table>`;
+  if (activeTab === 'supply') {
+    $('tableWrap').innerHTML = renderSupplyTable(rows);
+    return;
+  }
+
+  $('tableWrap').innerHTML = renderMatchedTable(rows);
 }
 
 function esc(s) {

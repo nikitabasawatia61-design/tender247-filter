@@ -153,8 +153,11 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .stat .num {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--ok);
+  color: var(--text);
 }
+
+.stat .num.ok { color: var(--ok); }
+.stat .num.warn { color: var(--warn); }
 
 .stat .label {
   font-size: 0.75rem;
