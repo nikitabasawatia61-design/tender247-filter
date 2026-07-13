@@ -1,12 +1,77 @@
 let scanResult = null;
 let activeTab = 'matched';
+let shortlistByDate = {};
 
 const CATEGORY_TABS = ['gem_msme', 'gem', 'psu', 'state_govt', 'private'];
+const SHORTLIST_STORAGE_KEY = 't247_shortlist_v1';
 
 const $ = (id) => document.getElementById(id);
 
 function setDefaultDate() {
   $('closingDate').value = '2026-07-17';
+}
+
+function currentClosingDate() {
+  return $('closingDate').value || scanResult?.closing_date || '';
+}
+
+function loadShortlistStore() {
+  try {
+    shortlistByDate = JSON.parse(localStorage.getItem(SHORTLIST_STORAGE_KEY) || '{}');
+  } catch {
+    shortlistByDate = {};
+  }
+}
+
+function saveShortlistStore() {
+  localStorage.setItem(SHORTLIST_STORAGE_KEY, JSON.stringify(shortlistByDate));
+}
+
+function getShortlistForDate(isoDate) {
+  if (!isoDate) return {};
+  return shortlistByDate[isoDate] || {};
+}
+
+function isShortlisted(tenderId, isoDate = currentClosingDate()) {
+  return Boolean(getShortlistForDate(isoDate)[String(tenderId)]);
+}
+
+function setShortlisted(row, checked, fromTab = activeTab) {
+  const isoDate = currentClosingDate();
+  if (!isoDate) return;
+
+  if (!shortlistByDate[isoDate]) shortlistByDate[isoDate] = {};
+  const id = String(row.tender_id);
+
+  if (checked) {
+    shortlistByDate[isoDate][id] = {
+      ...row,
+      tender_id: row.tender_id,
+      shortlisted_at: new Date().toISOString(),
+      shortlisted_from: fromTab,
+    };
+  } else {
+    delete shortlistByDate[isoDate][id];
+    if (!Object.keys(shortlistByDate[isoDate]).length) delete shortlistByDate[isoDate];
+  }
+
+  saveShortlistStore();
+  updateTabCounts();
+}
+
+function getShortlistedRows(isoDate = currentClosingDate()) {
+  const map = getShortlistForDate(isoDate);
+  return Object.values(map).sort(
+    (a, b) => new Date(b.shortlisted_at || 0) - new Date(a.shortlisted_at || 0)
+  );
+}
+
+function clearShortlistForDate(isoDate = currentClosingDate()) {
+  if (!isoDate) return;
+  delete shortlistByDate[isoDate];
+  saveShortlistStore();
+  updateTabCounts();
+  renderTable();
 }
 
 function showProgress(show) {
@@ -44,6 +109,7 @@ function renderStats(summary) {
     ['PSU', summary.matched_psu ?? 0, ''],
     ['State Govt', summary.matched_state_govt ?? 0, ''],
     ['Private', summary.matched_private ?? 0, ''],
+    ['Shortlisted', getShortlistedRows().length, 'shortlist'],
     ['Supply', summary.supply_related ?? 0, 'warn'],
     ['Excluded', (summary.excluded_not_field || 0) + (summary.excluded_financial_api || 0), ''],
   ];
@@ -62,6 +128,19 @@ function getMatchedRows(category) {
 }
 
 function getRowsForTab() {
+  if (activeTab === 'shortlisted') {
+    const q = $('searchBox').value.toLowerCase().trim();
+    let rows = getShortlistedRows();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        (r.organization || '').toLowerCase().includes(q) ||
+        (r.brief || '').toLowerCase().includes(q) ||
+        (r.portal || '').toLowerCase().includes(q) ||
+        String(r.tender_id || '').includes(q)
+    );
+  }
+
   if (!scanResult) return [];
   const q = $('searchBox').value.toLowerCase().trim();
 
@@ -96,17 +175,29 @@ function msmeBadge(r) {
   return '<span class="badge">MSME</span>';
 }
 
+function shortlistCheckboxCell(r) {
+  const id = esc(String(r.tender_id));
+  const checked = isShortlisted(r.tender_id) ? 'checked' : '';
+  return `<td class="col-shortlist"><input type="checkbox" class="shortlist-cb" data-tender-id="${id}" ${checked} aria-label="Shortlist tender ${id}" /></td>`;
+}
+
+function rowClass(r) {
+  return isShortlisted(r.tender_id) ? 'row-shortlisted' : '';
+}
+
 function renderMatchedTable(rows, showCategory = false) {
   const categoryCol = showCategory ? '<th>Category</th>' : '';
   return `
     <table>
       <thead><tr>
+        <th class="col-shortlist" title="Shortlist">Pick</th>
         <th>ID</th><th>Organization</th><th>Brief</th>${categoryCol}<th>Portal</th><th>Value</th><th>EMD</th><th>MSME</th><th></th>
       </tr></thead>
       <tbody>
         ${rows
           .map(
-            (r) => `<tr>
+            (r) => `<tr class="${rowClass(r)}" data-tender-id="${esc(String(r.tender_id))}">
+            ${shortlistCheckboxCell(r)}
             <td>${r.tender_id}</td>
             <td>${esc(r.organization || '—')}${r.org_type ? `<div class="notes">${esc(r.org_type)}</div>` : ''}</td>
             <td class="brief">${esc((r.brief || '').slice(0, 140))}
@@ -129,12 +220,14 @@ function renderSupplyTable(rows) {
   return `
     <table>
       <thead><tr>
+        <th class="col-shortlist" title="Shortlist">Pick</th>
         <th>ID</th><th>Organization</th><th>Brief</th><th>Value</th><th>EMD</th><th>Reason</th><th></th>
       </tr></thead>
       <tbody>
         ${rows
           .map(
-            (r) => `<tr>
+            (r) => `<tr class="${rowClass(r)}" data-tender-id="${esc(String(r.tender_id))}">
+            ${shortlistCheckboxCell(r)}
             <td>${r.tender_id}</td>
             <td>${esc(r.organization || '—')}</td>
             <td class="brief">${esc((r.brief || '').slice(0, 140))}</td>
@@ -149,6 +242,48 @@ function renderSupplyTable(rows) {
     </table>`;
 }
 
+function renderShortlistedTable(rows) {
+  const isoDate = currentClosingDate();
+  return `
+    ${rows.length ? `<div class="shortlist-actions"><button type="button" class="secondary" id="clearShortlistBtn">Clear shortlist for ${esc(isoDate)}</button></div>` : ''}
+    <table>
+      <thead><tr>
+        <th class="col-shortlist" title="Remove">Pick</th>
+        <th>ID</th><th>Organization</th><th>Brief</th><th>Category</th><th>Portal</th><th>Value</th><th>EMD</th><th>From tab</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${rows
+          .map(
+            (r) => `<tr class="row-shortlisted" data-tender-id="${esc(String(r.tender_id))}">
+            ${shortlistCheckboxCell(r)}
+            <td>${r.tender_id}</td>
+            <td>${esc(r.organization || '—')}</td>
+            <td class="brief">${esc((r.brief || '').slice(0, 140))}
+              ${r.notes?.length ? `<div class="notes">${esc(r.notes.join(' · '))}</div>` : ''}
+            </td>
+            <td>${esc(r.category_label || r.category || '—')}</td>
+            <td>${esc(r.portal || '—')}</td>
+            <td>${esc(r.value_fmt || '—')}</td>
+            <td>${esc(r.emd_fmt || '—')}</td>
+            <td>${esc(r.shortlisted_from || '—')}</td>
+            <td>${r.url ? `<a class="link" href="${r.url}" target="_blank" rel="noopener">Open</a>` : ''}</td>
+          </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>`;
+}
+
+function findRowInScan(tenderId) {
+  if (!scanResult) return null;
+  const id = String(tenderId);
+  const pools = [
+    ...(scanResult.matched || []),
+    ...(scanResult.supply || []),
+  ];
+  return pools.find((r) => String(r.tender_id) === id) || null;
+}
+
 function updateTabCounts() {
   $('countMatched').textContent = scanResult?.summary?.matched ?? scanResult?.matched?.length ?? 0;
   $('countGemMsme').textContent = countForCategory('gem_msme');
@@ -157,6 +292,7 @@ function updateTabCounts() {
   $('countStateGovt').textContent = countForCategory('state_govt');
   $('countPrivate').textContent = countForCategory('private');
   $('countSupply').textContent = scanResult?.summary?.supply_related ?? scanResult?.supply?.length ?? 0;
+  $('countShortlisted').textContent = getShortlistedRows().length;
   const ex = scanResult?.excluded || {};
   $('countExcluded').textContent = (ex.not_field?.length || 0) + (ex.financial_api?.length || 0);
 }
@@ -164,6 +300,24 @@ function updateTabCounts() {
 function renderTable() {
   const rows = getRowsForTab();
   updateTabCounts();
+
+  if (activeTab === 'shortlisted') {
+    if (!currentClosingDate()) {
+      $('tableWrap').innerHTML = '<p class="empty">Select a closing date to view shortlisted tenders.</p>';
+      return;
+    }
+    if (!rows.length) {
+      $('tableWrap').innerHTML = `<p class="empty">No shortlisted tenders for ${esc(currentClosingDate())}. Check the box on any tender in Matched or Supply tabs.</p>`;
+      return;
+    }
+    $('tableWrap').innerHTML = renderShortlistedTable(rows);
+    $('clearShortlistBtn')?.addEventListener('click', () => {
+      if (confirm(`Clear all shortlisted tenders for ${currentClosingDate()}?`)) {
+        clearShortlistForDate();
+      }
+    });
+    return;
+  }
 
   if (!scanResult) {
     $('tableWrap').innerHTML = '<p class="empty">Pick a closing date and click Scan tenders.</p>';
@@ -223,6 +377,24 @@ function applyResult(result) {
   renderStats(result.summary);
   $('exportBtn').disabled = false;
   renderTable();
+}
+
+function handleShortlistToggle(checkbox) {
+  const tenderId = checkbox.dataset.tenderId;
+  const fresh = findRowInScan(tenderId);
+  const existing = getShortlistForDate(currentClosingDate())[tenderId];
+  const row = fresh || existing;
+
+  if (!row) return;
+
+  setShortlisted(row, checkbox.checked, activeTab);
+
+  const tr = checkbox.closest('tr');
+  if (tr) tr.classList.toggle('row-shortlisted', checkbox.checked);
+
+  if (activeTab === 'shortlisted' && !checkbox.checked) {
+    renderTable();
+  }
 }
 
 async function runScan() {
@@ -305,7 +477,11 @@ async function loadCache() {
 
 function exportJson() {
   if (!scanResult) return;
-  const blob = new Blob([JSON.stringify(scanResult, null, 2)], { type: 'application/json' });
+  const payload = {
+    ...scanResult,
+    shortlisted: getShortlistedRows(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `tenders_${scanResult.closing_date}.json`;
@@ -321,9 +497,22 @@ document.querySelectorAll('.tab').forEach((btn) => {
   });
 });
 
+$('tableWrap').addEventListener('change', (e) => {
+  if (e.target.classList.contains('shortlist-cb')) {
+    handleShortlistToggle(e.target);
+  }
+});
+
+$('closingDate').addEventListener('change', () => {
+  updateTabCounts();
+  if (activeTab === 'shortlisted') renderTable();
+});
+
 $('scanBtn').addEventListener('click', runScan);
 $('loadCacheBtn').addEventListener('click', loadCache);
 $('exportBtn').addEventListener('click', exportJson);
 $('searchBox').addEventListener('input', renderTable);
 
+loadShortlistStore();
 setDefaultDate();
+updateTabCounts();
