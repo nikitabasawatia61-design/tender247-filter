@@ -1,0 +1,23 @@
+# Ignore everything by default — only deploy files are tracked
+*
+
+!.gitignore
+!README.md
+!render.yaml
+!package.json
+!package-lock.json
+!server.js
+!login.js
+!read_documents.js
+!lib/
+!lib/**
+!public/
+!public/**
+!.env.example
+!.cursor/
+!.cursor/**
+
+# Always ignore
+node_modules/
+.env
+docs/

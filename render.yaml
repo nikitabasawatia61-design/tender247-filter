@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: tender247-filter
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: T247_EMAIL
+        sync: false
+      - key: T247_PASSWORD
+        sync: false

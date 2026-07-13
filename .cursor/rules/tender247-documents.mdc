@@ -1,0 +1,26 @@
+---
+description: Always read tender NIT/documents, not API metadata
+alwaysApply: true
+---
+
+# Tender247 — Read Documents, Not Metadata
+
+When analyzing tenders from Tender247:
+
+1. **Never rely on API metadata alone** (`requirement_workbrief`, search summaries, or detail fields) for scope, value, EMD, turnover, experience, or eligibility.
+2. **Always download and read actual documents** via document-list API + `https://documents.tender247.com/tender/download-document/{doc_path}?tender_id={id}`.
+3. **Read in priority order:** NIT → Tender Document → Corrigendum → BOQ.
+4. **Extract from PDF/ZIP text:** tender value, EMD, closing date, turnover requirement, experience, MSME clauses, scope of work.
+5. **State clearly** which document types were read and which could not be downloaded/parsed.
+6. Use `read_documents.js` / updated `fetch_tenders.js` for automated download and PDF extraction.
+
+If documents are missing or unreadable, say so explicitly — do not fall back to metadata without labeling it as unverified.
+
+## Hard eligibility limits (Shri Hari Engineering Group)
+
+When filtering in the app:
+
+1. **Exclude not-field categories** — toners, laptops, solar, SCADA hardware, civil works, AMC of printers, etc. (see `lib/filters.js` EXCLUDE_BRIEF).
+2. **Exclude when API shows value > ₹1 Cr or EMD > ₹2 Lakh** (only when Tender247 API has a non-zero value).
+3. **Do not exclude based on document-read value/EMD** — documents are optional for notes/warnings only.
+4. Tenders with API value/EMD = 0 stay in the list as "Refer Document"; user checks portal before bidding.

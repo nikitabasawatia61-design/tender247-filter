@@ -1,0 +1,13 @@
+{
+  "name": "tender247",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "scan": "node analyze_all_closing.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.18",
+    "express": "^4.22.2",
+    "pdf-parse": "^1.1.1"
+  }
+}

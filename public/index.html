@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tender247 Filter — Software Tenders</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="layout">
+    <header>
+      <h1>Tender247 Filter</h1>
+      <p class="subtitle">Exclude: corrigendum, installation, toners/laptops/solar/SCADA/civil · API value ≤ ₹1 Cr · API EMD ≤ ₹2 Lakh</p>
+    </header>
+
+    <section class="panel controls">
+      <div class="row">
+        <label>
+          Closing date
+          <input type="date" id="closingDate" />
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="readDocuments" />
+          Read NIT/PDF for extra notes (optional, slower — does not filter)
+        </label>
+      </div>
+      <div class="row actions">
+        <button type="button" id="scanBtn" class="primary">Scan tenders</button>
+        <button type="button" id="loadCacheBtn" class="secondary">Load cached scan</button>
+        <button type="button" id="exportBtn" class="secondary" disabled>Export JSON</button>
+      </div>
+      <div id="progress" class="progress hidden">
+        <div class="progress-bar"><div id="progressFill"></div></div>
+        <p id="progressText">Starting…</p>
+      </div>
+    </section>
+
+    <section class="panel stats hidden" id="statsPanel">
+      <div class="stat-grid" id="stats"></div>
+    </section>
+
+    <section class="panel">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="matched">Matched <span id="countMatched">0</span></button>
+        <button type="button" class="tab" data-tab="excluded">Excluded <span id="countExcluded">0</span></button>
+      </div>
+      <div class="search-row">
+        <input type="search" id="searchBox" placeholder="Search organization or brief…" />
+      </div>
+      <div id="tableWrap" class="table-wrap">
+        <p class="empty">Pick a closing date and click Scan tenders.</p>
+      </div>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
