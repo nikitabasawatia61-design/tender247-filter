@@ -3,6 +3,7 @@ let activeTab = 'matched';
 let shortlistByDate = {};
 
 const CATEGORY_TABS = ['gem_msme', 'gem', 'psu', 'state_govt', 'private'];
+const SUPPLY_TABS = ['supply_hardware', 'supply_software'];
 const SHORTLIST_STORAGE_KEY = 't247_shortlist_v1';
 
 const $ = (id) => document.getElementById(id);
@@ -110,7 +111,8 @@ function renderStats(summary) {
     ['State Govt', summary.matched_state_govt ?? 0, ''],
     ['Private', summary.matched_private ?? 0, ''],
     ['Shortlisted', getShortlistedRows().length, 'shortlist'],
-    ['Supply', summary.supply_related ?? 0, 'warn'],
+    ['Supply HW', summary.supply_hardware ?? 0, 'warn'],
+    ['Supply SW', summary.supply_software ?? 0, 'warn'],
     ['Excluded', (summary.excluded_not_field || 0) + (summary.excluded_financial_api || 0), ''],
   ];
   $('stats').innerHTML = items
@@ -149,8 +151,10 @@ function getRowsForTab() {
     rows = scanResult.matched || [];
   } else if (CATEGORY_TABS.includes(activeTab)) {
     rows = getMatchedRows(activeTab);
-  } else if (activeTab === 'supply') {
-    rows = scanResult.supply || [];
+  } else if (activeTab === 'supply_hardware') {
+    rows = scanResult.supply_hardware || (scanResult.supply || []).filter((r) => r.supply_type !== 'software');
+  } else if (activeTab === 'supply_software') {
+    rows = scanResult.supply_software || (scanResult.supply || []).filter((r) => r.supply_type === 'software');
   } else {
     const ex = scanResult.excluded || {};
     rows = [
@@ -279,6 +283,8 @@ function findRowInScan(tenderId) {
   const id = String(tenderId);
   const pools = [
     ...(scanResult.matched || []),
+    ...(scanResult.supply_hardware || []),
+    ...(scanResult.supply_software || []),
     ...(scanResult.supply || []),
   ];
   return pools.find((r) => String(r.tender_id) === id) || null;
@@ -291,7 +297,10 @@ function updateTabCounts() {
   $('countPsu').textContent = countForCategory('psu');
   $('countStateGovt').textContent = countForCategory('state_govt');
   $('countPrivate').textContent = countForCategory('private');
-  $('countSupply').textContent = scanResult?.summary?.supply_related ?? scanResult?.supply?.length ?? 0;
+  $('countSupplyHw').textContent =
+    scanResult?.summary?.supply_hardware ?? scanResult?.supply_hardware?.length ?? 0;
+  $('countSupplySw').textContent =
+    scanResult?.summary?.supply_software ?? scanResult?.supply_software?.length ?? 0;
   $('countShortlisted').textContent = getShortlistedRows().length;
   const ex = scanResult?.excluded || {};
   $('countExcluded').textContent = (ex.not_field?.length || 0) + (ex.financial_api?.length || 0);
@@ -307,7 +316,7 @@ function renderTable() {
       return;
     }
     if (!rows.length) {
-      $('tableWrap').innerHTML = `<p class="empty">No shortlisted tenders for ${esc(currentClosingDate())}. Check the box on any tender in Matched or Supply tabs.</p>`;
+      $('tableWrap').innerHTML = `<p class="empty">No shortlisted tenders for ${esc(currentClosingDate())}. Check the box on any tender in Matched or Supply HW/SW tabs.</p>`;
       return;
     }
     $('tableWrap').innerHTML = renderShortlistedTable(rows);
@@ -327,8 +336,10 @@ function renderTable() {
   if (!rows.length) {
     const hint =
       activeTab === 'matched' || CATEGORY_TABS.includes(activeTab)
-        ? ' Try another tab — category filters, <strong>Supply</strong>, or <strong>Excluded</strong>.'
-        : '';
+        ? ' Try another tab — category filters, <strong>Supply HW/SW</strong>, or <strong>Excluded</strong>.'
+        : activeTab === 'shortlisted'
+          ? ' Check the box on any tender in Matched or Supply tabs.'
+          : '';
     $('tableWrap').innerHTML = `<p class="empty">No tenders in this tab${$('searchBox').value ? ' matching search' : ''}.${hint}</p>`;
     return;
   }
@@ -356,7 +367,7 @@ function renderTable() {
     return;
   }
 
-  if (activeTab === 'supply') {
+  if (activeTab === 'supply_hardware' || activeTab === 'supply_software') {
     $('tableWrap').innerHTML = renderSupplyTable(rows);
     return;
   }
