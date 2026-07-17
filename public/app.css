@@ -292,6 +292,77 @@ tr.row-shortlisted td {
   margin-top: 1rem;
 }
 
+.cppp-note {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.cppp-note code {
+  background: var(--bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.ingest-panel {
+  margin-top: 1rem;
+}
+
+.ingest-panel summary {
+  cursor: pointer;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.ingest-panel textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.captcha-panel {
+  margin-bottom: 1rem;
+}
+
+.captcha-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.captcha-img {
+  max-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.captcha-img.hidden {
+  display: none;
+}
+
+.org-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.org-actions .fetch-org-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
 @media (max-width: 640px) {
   .layout { padding: 1rem; }
   .brief { max-width: 200px; }

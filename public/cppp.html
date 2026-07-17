@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CPPP eProc — IT Tenders</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="layout">
+    <header>
+      <h1>CPPP eProc (Government of India)</h1>
+      <p class="subtitle">
+        <a class="link" href="/">← Tender247 Filter</a>
+        · Software / website / chatbot / IT maintenance tenders from eprocure.gov.in
+      </p>
+    </header>
+
+    <section class="panel controls">
+      <p class="cppp-note">
+        The portal at <strong>eprocure.gov.in</strong> does not expose a public JSON API.
+        Search uses the same <strong>CAPTCHA form</strong> as the website.
+      </p>
+
+      <div class="captcha-panel" id="captchaPanel">
+        <div class="captcha-row">
+          <img id="captchaImg" alt="Captcha" class="captcha-img hidden" />
+          <div class="captcha-fields">
+            <label>
+              Enter 6 characters exactly as shown (no spaces)
+              <input type="text" id="captchaText" maxlength="6" autocomplete="off" placeholder="6 chars from image" autocapitalize="off" spellcheck="false" />
+            </label>
+          </div>
+        </div>
+        <div class="row actions">
+          <button type="button" id="refreshCaptchaBtn" class="secondary">Refresh captcha</button>
+          <button type="button" id="searchOrgsBtn" class="primary">Search organisations</button>
+          <button type="button" id="fetchAllBtn" class="primary" disabled>Fetch all tenders</button>
+          <button type="button" id="loadCacheBtn" class="secondary">Load cached</button>
+          <button type="button" id="ingestBtn" class="secondary">Import JSON</button>
+          <button type="button" id="exportBtn" class="secondary" disabled>Export</button>
+        </div>
+      </div>
+
+      <details class="ingest-panel" id="ingestPanel">
+        <summary>Paste scraped JSON (organisations + tenders)</summary>
+        <textarea id="ingestJson" rows="8" placeholder='{"organisations":[{"name":"AIIMS New Delhi","tender_count":30}],"tenders":[{"title":"website development...","organisation":"AIIMS","closing_date":"27-Jul-2026"}]}'></textarea>
+        <button type="button" id="ingestSubmitBtn" class="primary">Load into UI</button>
+      </details>
+
+      <div id="progress" class="progress hidden">
+        <div class="progress-bar"><div id="progressFill"></div></div>
+        <p id="progressText">Starting…</p>
+      </div>
+    </section>
+
+    <section class="panel stats hidden" id="statsPanel">
+      <div class="stat-grid" id="stats"></div>
+    </section>
+
+    <section class="panel">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="matched">Matched <span id="countMatched">0</span></button>
+        <button type="button" class="tab" data-tab="supply_hardware">Supply HW <span id="countSupplyHw">0</span></button>
+        <button type="button" class="tab" data-tab="supply_software">Supply SW <span id="countSupplySw">0</span></button>
+        <button type="button" class="tab" data-tab="excluded">Excluded <span id="countExcluded">0</span></button>
+        <button type="button" class="tab" data-tab="other">Other <span id="countOther">0</span></button>
+        <button type="button" class="tab" data-tab="all_tenders">All Scraped <span id="countAll">0</span></button>
+        <button type="button" class="tab" data-tab="organisations">Organisations <span id="countOrgs">0</span></button>
+        <button type="button" class="tab tab-shortlist" data-tab="shortlisted">Shortlisted <span id="countShortlisted">0</span></button>
+      </div>
+      <div class="search-row">
+        <input type="search" id="searchBox" placeholder="Search organisation or tender title…" />
+      </div>
+      <div id="tableWrap" class="table-wrap">
+        <p class="empty">Click <strong>Refresh captcha</strong>, enter the code, then <strong>Search organisations</strong>.</p>
+      </div>
+    </section>
+  </div>
+  <script src="cppp.js"></script>
+</body>
+</html>
